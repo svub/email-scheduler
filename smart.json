@@ -1,0 +1,14 @@
+{
+	"name": "email-scheduler",
+	"description": "Sends out scheduled emails e.g. for newsletters or updates.",
+	"homepage": "",
+	"author": "Sven Buschbeck",
+	"version": "0.0.2",
+	"git": "https://github.com/svub/email-scheduler.git",
+	"packages": {
+		"tools": {
+			"path": "../tools"
+		}
+		"meteor-cron2": {}
+	}
+}
