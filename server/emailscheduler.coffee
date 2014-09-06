@@ -1,4 +1,3 @@
-#
 class EmailScheduler
   constructor: ->
     @jobs = []
@@ -7,27 +6,43 @@ class EmailScheduler
     @Fiber = Npm.require 'fibers'
 
   run: (name, composer) ->
-    log "EmailScheduler.run #{name}..."
-    @send composer messages, id, name for id, messages of _.groupBy (@load name),'userId'
+    log "EmailScheduler.run #{name} at #{moment().format()}..."
+    for userId, messages of _.groupBy (@load name),'userId'
+      @send composer messages, userId, name
+      #@queue.update { _id: userId }, $set: done: true
     @remove name
-  load: (schedule) -> (@queue.find schedule: schedule).fetch()
-  remove: (schedule) -> (@queue.remove { schedule: schedule }, { multi: true })
+  load: (schedule) -> (@queue.find schedule: schedule, done: $exists: 0).fetch()
+  #remove: (schedule) -> (@queue.remove { schedule: schedule }, { multi: true })
+  remove: (schedule) -> @queue.update { schedule: schedule }, { $set: done: new Date() }, multi: true
   send: (composedMessage) -> @sendEmail m.address, m.subject, m.content if (m=composedMessage)?
   add: (schedule, user, data) -> @queue.insert schedule: schedule, data: data, userId: user?._id ? user
 
   addSchedule: (name, pattern, composer = @getComposer()) ->
-    try
-      log "EmailScheduler: adding schedule #{name} with pattern #{pattern}..."
-      #fiber = @Fiber.current
-      #@jobs.push job = new CRON.CronJob pattern, (=> @run name, composer, job, pattern), (-> fiber.run()), true, @tz
-      #@jobs.push job = new CRON.CronJob pattern, (-> Meteor.call 'emailschedulerrun', name, composer, job, pattern), (-> fiber.run()), true, @tz
-      @jobs.push job = new CRON.CronJob pattern, (=> @Fiber(=> @run name, composer, job, pattern).run()), null, true, @tz
-      #@Fiber.yield()
-      true
-    catch e
-      log "EmailScheduler: invalid pattern '#{pattern}' for schedule '#{name}'"
-      loge e
-      false
+    # meteor-cron2 based scheduling
+    #try
+    #  log "EmailScheduler: adding schedule #{name} with pattern #{pattern}..."
+    #  @jobs.push job = new CRON.CronJob pattern, (=> @Fiber(=> @run name, composer, job, pattern).run()), null, true, @tz
+    #  true
+    #catch e
+    #  log "EmailScheduler: invalid pattern '#{pattern}' for schedule '#{name}'"
+    #  loge e
+    #  false
+    log 'mooooo'
+    SyncedCron.add
+      name: name
+      schedule: (parser) -> # parser is a later.parse object
+        logmr 'EmailScheduler.addSchedule: parsed schedule', parser.cron pattern
+      job: => @run name, composer
+    @_autoStartScheduler()
+
+  _autoStartScheduler: debounce 1000, -> @Fiber(=> @startScheduler()).run()
+  startScheduler: ->
+    if @started then log 'EmailScheduler: scheduler started already.'
+    else
+      @started = true
+      Meteor.startup ->
+        log 'EmailScheduler: starting scheduler...'
+        SyncedCron.start()
 
   configure: (config) -> _.extend @, config
   # properties and methods below configurable, i.e. should be overwritten as needed

@@ -8,7 +8,6 @@
     "packages": {
         "tools": {
             "path": "../tools"
-        },
-        "meteor-cron2": {}
+        }
     }
 }
