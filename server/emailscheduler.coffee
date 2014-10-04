@@ -27,7 +27,6 @@ class EmailScheduler
     #  log "EmailScheduler: invalid pattern '#{pattern}' for schedule '#{name}'"
     #  loge e
     #  false
-    log 'mooooo'
     SyncedCron.add
       name: name
       schedule: (parser) -> # parser is a later.parse object
