@@ -10,10 +10,11 @@ class EmailScheduler
     for userId, messages of _.groupBy (@load name),'userId'
       @send composer messages, userId, name
       #@queue.update { _id: userId }, $set: done: true
-    @remove name
-  load: (schedule) -> (@queue.find schedule: schedule, done: $exists: 0).fetch()
+    @done name
+  query: (schedule) -> schedule: schedule, done: $exists: 0
+  load: (schedule) -> (@queue.find @query schedule).fetch()
   #remove: (schedule) -> (@queue.remove { schedule: schedule }, { multi: true })
-  remove: (schedule) -> @queue.update { schedule: schedule }, { $set: done: new Date() }, multi: true
+  done: (schedule) -> @queue.update (@query schedule), { $set: done: new Date() }, multi: true
   send: (composedMessage) -> @sendEmail m.address, m.subject, m.content if (m=composedMessage)?
   add: (schedule, user, data) -> @queue.insert schedule: schedule, data: data, userId: user?._id ? user
 
